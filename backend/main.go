@@ -1,22 +1,43 @@
 package main
 
 import (
-	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3" // SQLite driver
 	"log"
 	"net/http"
+	"os"
+
+	"github.com/joho/godotenv"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3" // SQLite driver
+	// "net/http"
 )
 
 var db *sqlx.DB
 
+func ensure() {
+	cookie_domain := os.Getenv("COOKIE_DOMAIN")
+	if cookie_domain == "" {
+		panic("COOKIE_DOMAIN not found in .env")
+	}
+}
+func loadEnv() {
+
+	err := godotenv.Load()
+	if err != nil {
+		panic("Error loading .env file")
+	}
+	ensure()
+}
+
 func main() {
-	// Connect to SQLite database
+	loadEnv();
 	var err error
 	db, err = sqlx.Connect("sqlite3", "./todo.db")
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
 	defer db.Close()
+
 
 	// Create tables
 	err = createTables(db)
@@ -42,6 +63,7 @@ func createTables(db *sqlx.DB) error {
 		PRIMARY KEY("id" AUTOINCREMENT)
     );
 	INSERT OR IGNORE INTO users (username, password, created_at) VALUES ('0bcMoon', 'password', CURRENT_TIMESTAMP);
+	INSERT OR IGNORE INTO users (username, password, created_at) VALUES ('hicham', 'password', CURRENT_TIMESTAMP);
 	`
 	_, err := db.Exec(users)
 	if err != nil {
@@ -51,7 +73,7 @@ func createTables(db *sqlx.DB) error {
 	projectSchema := `
     CREATE TABLE IF NOT EXISTS projects (
         id TEXT PRIMARY KEY,
-		user_id TEXT NOT NULL,
+		user_id INTEGER NOT NULL,
         name TEXT NOT NULL,
         description TEXT,
         created_at DATETIME NOT NULL,

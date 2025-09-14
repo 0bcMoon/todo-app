@@ -2,16 +2,22 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
+	"time"
 )
+
 type UserLogin struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
-func validateToken(_ string) (*User, error) {
+func getUserInfo(_ string) (*User, error) {
 	// Dummy validation for example purposes
 	return &User{
 		ID:       1,
@@ -19,6 +25,7 @@ func validateToken(_ string) (*User, error) {
 		Password: "thisisahashpassword",
 	}, nil
 }
+
 var Session map[string]User
 
 type contextKey string
@@ -34,26 +41,29 @@ func AuthMiddleware() func(next http.Handler) http.Handler {
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}
-			session_token := session_cookies.String()
-			if session_token == "" {
+			session_token := session_cookies.Value
+
+			if  session_token == "" {
 				http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 				return
 			}
-			user, err := validateToken(session_token)
+			user, err := getUserInfo(session_token)
 			if err != nil {
 				http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 				return
 			}
+			fmt.Println("Authenticated user:", user.Username)
 			ctx := context.WithValue(r.Context(), UserContextKey, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
-func getUserFromContext(ctx context.Context) (*User, bool) {
-	user, ok := ctx.Value(UserContextKey).(*User)
-	return user, ok
+func getUserFromContext(ctx context.Context) *User {
+	user, _ := ctx.Value(UserContextKey).(*User)
+	return user
 }
+
 func Login(w http.ResponseWriter, r *http.Request) {
 
 	var req UserLogin
@@ -61,32 +71,69 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	user, err := GetUserByUsername(req.Username)
-	// TODO: Hash password and compare with stored hash
-	if (err != nil || user.Password != req.Password) {
+	if err != nil {
 		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 		return
 	}
-	// Create a session token (in a real app, use a secure random token)
-	sessionToken := "dummy-session-token"
-	Session[sessionToken] = *user
-	http.SetCookie(w, &http.Cookie{
+	// TODO: Hash password and compare with stored hash
+	if user.Password != req.Password {
+		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+		return
+	}
+
+	session_key, err := getRandomKey(24)
+	if err != nil {
+		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+		return
+	}
+	session_cookies := &http.Cookie{
 		Name:     "session_token",
-		Value:    sessionToken,
+		Value:    session_key,
 		HttpOnly: true,
-		Domain: "localhost",
-	})
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Login successful"))
+		Domain:   os.Getenv("COOKIE_DOMAIN"),
+		Path:     "/",
+		SameSite: http.SameSiteDefaultMode,
+	}
+	http.SetCookie(w, session_cookies)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Login successful"})
+}
+
+func Logout(w http.ResponseWriter, r *http.Request) {
+	// Invalidate the session token (implementation depends on how sessions are managed)
+	session_cookies := &http.Cookie{
+		Name:     "session_token",
+		Value:    "",
+		HttpOnly: true,
+		Domain:   os.Getenv("COOKIE_DOMAIN"),
+		Path:     "/",
+		SameSite: http.SameSiteDefaultMode,
+		Expires:  time.Unix(0, 0), // Expire the cookie immediately
+	}
+	http.SetCookie(w, session_cookies)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "logout successful"})
+
+	
+}
+
+func getRandomKey(size int) (string, error) {
+
+	randomBytes := make([]byte, size)
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		log.Fatal("Error generating random bytes:", err)
+		return "", nil
+	}
+	// Print as hex string (optional, for demonstration)
+	return hex.EncodeToString(randomBytes), nil
 }
 
 func GetUser(w http.ResponseWriter, r *http.Request) {
-	user, ok := getUserFromContext(r.Context())
 
-	if !ok {
-		http.Error(w, "Could not get User from Context", http.StatusInternalServerError)
-		return
-	}
+	user := getUserFromContext(r.Context())
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
 }

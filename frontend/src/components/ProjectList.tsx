@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useProjects } from '../hooks/useProjects';
 import { ProjectCard } from './ProjectCard';
 import { ProjectForm } from './ProjectForm';
-import { Plus, FolderPlus } from 'lucide-react';
+import { Plus, FolderPlus, LogOut } from 'lucide-react';
+import { api } from '../api/api';
 
 export const ProjectList: React.FC = () => {
     const [showProjectForm, setShowProjectForm] = useState(false);
@@ -12,6 +13,15 @@ export const ProjectList: React.FC = () => {
 
     const handleProjectClick = (projectId: string) => {
         navigate(`/project/${projectId}`);
+    };
+
+    const handleLogout = async () => {
+        try {
+            await api.logout();
+            navigate('/login');
+        } catch (error) {
+            console.error('Failed to logout', error);
+        }
     };
 
     if (isLoading) {
@@ -38,13 +48,22 @@ export const ProjectList: React.FC = () => {
                         <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
                         <p className="text-gray-600 mt-1">Manage your projects and todos</p>
                     </div>
-                    <button
-                        onClick={() => setShowProjectForm(true)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                    >
-                        <Plus size={20} />
-                        New Project
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setShowProjectForm(true)}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                        >
+                            <Plus size={20} />
+                            New Project
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+                        >
+                            <LogOut size={20} />
+                            Logout
+                        </button>
+                    </div>
                 </div>
 
                 {projects.length === 0 ? (

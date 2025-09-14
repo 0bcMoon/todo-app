@@ -26,6 +26,7 @@ func setupRoutes() http.Handler {
 	}))
 
 	r.Route("/projects", func(r chi.Router) {
+		r.Use(AuthMiddleware())
 		r.Get("/", getProjects)
 		r.Post("/", createProject)
 		r.Route("/{projectID}", func(r chi.Router) {
@@ -35,6 +36,8 @@ func setupRoutes() http.Handler {
 	})
 
 	r.Route("/todos", func(r chi.Router) {
+		r.Use(AuthMiddleware())
+		r.Use(AuthMiddleware())
 		r.Post("/", createTodo)
 		r.Route("/{todoID}", func(r chi.Router) {
 			r.Put("/", updateTodo)
@@ -49,6 +52,8 @@ func setupRoutes() http.Handler {
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/login", Login)
+		r.Delete("/logout", Logout)
+
 	})
 
 	// Serve frontend

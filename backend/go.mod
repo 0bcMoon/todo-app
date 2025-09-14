@@ -9,3 +9,9 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.32
 )
+
+require (
+	github.com/joho/godotenv v1.5.1 // indirect
+	github.com/rs/cors v1.11.1 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
+)

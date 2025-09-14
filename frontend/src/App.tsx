@@ -1,27 +1,14 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createBrowserRouter, Outlet, RouterProvider, useNavigate } from 'react-router-dom';
 import { ProjectList } from './components/ProjectList';
 import { ProjectPage } from './components/ProjectPage';
+import LoginForm from './login';
+import {  useAuth } from './AuthContext';
+import { useEffect } from 'react';
 
-const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            retry: 1,
-            refetchOnWindowFocus: false,
-        },
-    },
-});
+
 
 function App() {
     return (
-        <QueryClientProvider client={queryClient}>
-            <Router>
-                <Routes>
-                    <Route path="/" element=<ProjectList /> />
-                    <Route path="/project/:projectId" element=<ProjectPage /> />
-                </Routes>
-            </Router>
-        </QueryClientProvider>
     );
 }
 

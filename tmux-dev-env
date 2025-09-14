@@ -7,6 +7,7 @@ tmux new-session -d -s todo
 tmux send-keys -t todo:1 "cd backend" C-m
 tmux send-keys -t todo:1 "nvim" C-m
 
+
 tmux new-window -t todo:2 -n "nvim-frontend"
 tmux send-keys -t todo:2 "cd frontend" C-m
 tmux send-keys -t todo:2 "nvim" C-m
@@ -14,6 +15,10 @@ tmux send-keys -t todo:2 "nvim" C-m
 tmux new-window -t todo:3 -n "nvim-server"
 tmux send-keys -t todo:3 "cd frontend" C-m
 tmux send-keys -t todo:3 "npm run dev" C-m
+
+tmux new-window -t todo:4 -n "backend-server"
+tmux send-keys -t todo:4 "cd backend" C-m
+tmux send-keys -t todo:4 "air" C-m
 
 # Attach to the session
 tmux attach-session -t todo

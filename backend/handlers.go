@@ -2,14 +2,17 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-
 )
 
 func getProjects(w http.ResponseWriter, r *http.Request) {
-	projects, err := GetProjectsDB()
+
+	user := getUserFromContext(r.Context())
+
+	projects, err := GetProjectsDB(user.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -24,6 +27,8 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	user := getUserFromContext(r.Context())
+	p.UserID = user.ID
 
 	createdProject, err := CreateProjectDB(p)
 	if err != nil {
@@ -37,7 +42,10 @@ func createProject(w http.ResponseWriter, r *http.Request) {
 
 func deleteProject(w http.ResponseWriter, r *http.Request) {
 	projectID := chi.URLParam(r, "projectID")
-	err := DeleteProjectDB(projectID)
+
+	user := getUserFromContext(r.Context())
+	fmt.Println(user, projectID)
+	err := DeleteProjectDB(projectID, user.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -47,7 +55,9 @@ func deleteProject(w http.ResponseWriter, r *http.Request) {
 
 func getTodosByProject(w http.ResponseWriter, r *http.Request) {
 	projectID := chi.URLParam(r, "projectID")
-	todos, err := GetTodosByProjectDB(projectID)
+
+	user := getUserFromContext(r.Context())
+	todos, err := GetTodosByProjectDB(projectID, user.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -62,8 +72,9 @@ func createTodo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	user := getUserFromContext(r.Context())
 
-	createdTodo, err := CreateTodoDB(t)
+	createdTodo, err := CreateTodoDB(t, user.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -75,13 +86,14 @@ func createTodo(w http.ResponseWriter, r *http.Request) {
 
 func updateTodo(w http.ResponseWriter, r *http.Request) {
 	todoID := chi.URLParam(r, "todoID")
+	user := getUserFromContext(r.Context())
 	var t Todo
 	if err := json.NewDecoder(r.Body).Decode(&t); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	updatedTodo, err := UpdateTodoDB(todoID, t)
+	updatedTodo, err := UpdateTodoDB(todoID, user.ID, t)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -92,7 +104,8 @@ func updateTodo(w http.ResponseWriter, r *http.Request) {
 
 func deleteTodo(w http.ResponseWriter, r *http.Request) {
 	todoID := chi.URLParam(r, "todoID")
-	err := DeleteTodoDB(todoID)
+	user := getUserFromContext(r.Context())
+	err := DeleteTodoDB(todoID, user.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -18,6 +19,7 @@ type User struct {
 // Project represents a project in our database
 type Project struct {
 	ID          string    `json:"id"           db:"id"`
+	UserID      int       `json:"userId"       db:"user_id"`
 	Name        string    `json:"name"         db:"name"`
 	Description string    `json:"description"  db:"description"`
 	CreatedAt   time.Time `json:"createdAt"    db:"created_at"`
@@ -36,12 +38,15 @@ type Todo struct {
 }
 
 func GetUserByUsername(username string) (*User, error) {
-	var user User
+	user := User{}
 
-	fmt.Println("Fetching user by username:", username) // Debugging line
-	err := db.Select(&user, "SELECT * FROM users WHERE username=?", username)
+	err := db.Get(&user, "SELECT * FROM users WHERE username = ?", username)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("no user found with username: %s", username)
+	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch user: %w", err)
 	}
 	return &user, nil
 }
@@ -55,9 +60,9 @@ func GetCurrentUser(id int) (*User, error) {
 	return &user, nil
 }
 
-func GetProjectsDB() ([]Project, error) {
+func GetProjectsDB(id int) ([]Project, error) {
 	var projects []Project
-	err := db.Select(&projects, "SELECT * FROM projects ORDER BY created_at DESC")
+	err := db.Select(&projects, "SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC", id)
 	if err != nil {
 		return nil, err
 	}
@@ -72,22 +77,41 @@ func CreateProjectDB(p Project) (*Project, error) {
 	p.CreatedAt = time.Now()
 	p.UpdatedAt = time.Now()
 
-	_, err := db.NamedExec(`INSERT INTO projects (id, name, description, created_at, updated_at)
-		VALUES (:id, :name, :description, :created_at, :updated_at)`, p)
+	_, err := db.NamedExec(`INSERT INTO projects (id, user_id, name, description, created_at, updated_at)
+		VALUES (:id, :user_id, :name, :description, :created_at, :updated_at)`, p)
 	if err != nil {
 		return nil, err
 	}
 	return &p, nil
 }
 
-func DeleteProjectDB(projectID string) error {
-	_, err := db.Exec("DELETE FROM projects WHERE id = ?", projectID)
-	return err
+func DeleteProjectDB(projectID string, id int) error {
+	result, err := db.Exec("DELETE FROM projects WHERE id = ? AND user_id = ?", projectID, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("project not found or you don't have access")
+	}
+	return nil
 }
 
-func GetTodosByProjectDB(projectID string) ([]Todo, error) {
+func GetTodosByProjectDB(projectID string, userID int) ([]Todo, error) {
+	// check if project belongs to user
+	var project Project
+	err := db.Get(&project, "SELECT id FROM projects WHERE id = ? AND user_id = ?", projectID, userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("project not found or you don't have access")
+		}
+		return nil, err
+	}
 	var todos []Todo
-	err := db.Select(&todos, "SELECT * FROM todos WHERE project_id = ? ORDER BY created_at DESC", projectID)
+	err = db.Select(&todos, "SELECT * FROM todos WHERE project_id = ? ORDER BY created_at DESC", projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -97,13 +121,22 @@ func GetTodosByProjectDB(projectID string) ([]Todo, error) {
 	return todos, nil
 }
 
-func CreateTodoDB(t Todo) (*Todo, error) {
+func CreateTodoDB(t Todo, userID int) (*Todo, error) {
+	// check if project belongs to user
+	var project Project
+	err := db.Get(&project, "SELECT id FROM projects WHERE id = ? AND user_id = ?", t.ProjectID, userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("project not found or you don't have access")
+		}
+		return nil, err
+	}
 	t.ID = uuid.New().String()
 	t.Status = "todo"
 	t.CreatedAt = time.Now()
 	t.UpdatedAt = time.Now()
 
-	_, err := db.NamedExec(`INSERT INTO todos (id, title, description, status, project_id, created_at, updated_at)
+	_, err = db.NamedExec(`INSERT INTO todos (id, title, description, status, project_id, created_at, updated_at)
         VALUES (:id, :title, :description, :status, :project_id, :created_at, :updated_at)`, t)
 	if err != nil {
 		return nil, err
@@ -111,11 +144,21 @@ func CreateTodoDB(t Todo) (*Todo, error) {
 	return &t, nil
 }
 
-func UpdateTodoDB(todoID string, t Todo) (*Todo, error) {
+func UpdateTodoDB(todoID string, userID int, t Todo) (*Todo, error) {
+	// check if todo belongs to user
+	var tid string
+	err := db.Get(&tid, "SELECT t.id FROM todos t JOIN projects p ON t.project_id = p.id WHERE t.id = ? AND p.user_id = ?", todoID, userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("todo not found or you don't have access")
+		}
+		return nil, err
+	}
+
 	t.ID = todoID
 	t.UpdatedAt = time.Now()
 
-	_, err := db.NamedExec(`UPDATE todos SET title = :title, description = :description, status = :status, updated_at = :updated_at
+	_, err = db.NamedExec(`UPDATE todos SET title = :title, description = :description, status = :status, updated_at = :updated_at
         WHERE id = :id`, t)
 	if err != nil {
 		return nil, err
@@ -130,7 +173,26 @@ func UpdateTodoDB(todoID string, t Todo) (*Todo, error) {
 	return &updatedTodo, nil
 }
 
-func DeleteTodoDB(todoID string) error {
-	_, err := db.Exec("DELETE FROM todos WHERE id = ?", todoID)
-	return err
+func DeleteTodoDB(todoID string, userID int) error {
+	res, err := db.Exec(`
+        DELETE FROM todos
+        WHERE id = ? AND project_id IN (
+            SELECT id FROM projects WHERE user_id = ?
+        )
+    `, todoID, userID)
+
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("todo not found or you don't have access")
+	}
+
+	return nil
 }
