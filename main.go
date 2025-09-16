@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
 
@@ -43,13 +42,13 @@ func main() {
 
 	r := setupRoutes()
 
-	log.Println("Server starting on port 8080...")
 	port := ":" 
 	if os.Getenv("PORT") != "" {
 		port += os.Getenv("PORT")
 	} else {
 		port += "8080"
 	}
+	log.Printf("Server starting on port %s...", port)
 	log.Fatal(http.ListenAndServe(port, r))
 }
 

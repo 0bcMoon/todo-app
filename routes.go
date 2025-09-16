@@ -7,6 +7,7 @@ import (
 	"strings"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"log"
 )
 
 func setupRoutes() http.Handler {
@@ -48,7 +49,9 @@ func setupRoutes() http.Handler {
 
 	// Serve frontend
 	workDir, _ := os.Getwd()
+	log.Println("Working Directory:", workDir)
 	filesDir := http.Dir(filepath.Join(workDir, "frontend", "dist"))
+	log.Println("Serving files from:", filepath.Join(workDir, "frontend", "dist"))
 	staticFileServer(r, "/", filesDir)
 
 	return r
