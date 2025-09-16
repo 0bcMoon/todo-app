@@ -22,9 +22,10 @@ func setupRoutes() http.Handler {
 
 	// Middlewares
 	r.Use(middleware.Logger)
-	r.Route("/health", func(r chi.Router) {
-		r.Get("/", getHealth)
-
+	r.Route("/", func(r chi.Router) {
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "./frontend/dist/index.html")
+		})
 	})
 
 
@@ -68,6 +69,7 @@ func setupRoutes() http.Handler {
 
 	return r
 }
+
 
 func staticFileServer(r chi.Router, path string, root http.FileSystem) {
 	if strings.ContainsAny(path, "{}*") {
