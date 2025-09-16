@@ -11,3 +11,5 @@ dist
 *.swp
 *.bak
 *.db
+tmp/main
+tmp

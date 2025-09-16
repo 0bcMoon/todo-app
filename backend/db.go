@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
-
+	"log"
 	"github.com/google/uuid"
 )
 
@@ -23,7 +23,6 @@ type Project struct {
 	Name        string    `json:"name"         db:"name"`
 	Description string    `json:"description"  db:"description"`
 	CreatedAt   time.Time `json:"createdAt"    db:"created_at"`
-	UpdatedAt   time.Time `json:"updatedAt"    db:"updated_at"`
 }
 
 // Todo represents a todo item in our database
@@ -34,17 +33,59 @@ type Todo struct {
 	Status      string    `json:"status"       db:"status"`
 	ProjectID   string    `json:"projectId"    db:"project_id"`
 	CreatedAt   time.Time `json:"createdAt"    db:"created_at"`
-	UpdatedAt   time.Time `json:"updatedAt"    db:"updated_at"`
+}
+
+func CreateSession(session_key string, userID int) (error) {
+	// Store the session in the database with an expiration time
+	_, err := db.Exec("INSERT INTO session (session_key, user_id) VALUES (?, ?)", session_key, userID)
+	if err != nil {
+		return  err
+	}
+	return nil
+}
+
+func CreateUser(username, password string) (*User, error) {
+	passwordHash, err := HashPassword(password)
+	if err != nil {
+		return nil, err
+	}
+	user := User{
+		Username:  username,
+		Password:  passwordHash,
+	}
+	_, err = db.NamedExec("INSERT INTO users (username, password) VALUES (:username, :password)", &user)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func GetUserFromSession(session_key string) (*User, error) {
+	user := User{}
+	query := `SELECT
+					u.id,
+					u.username,
+					u.password,
+					u.created_at
+				FROM users u
+				JOIN session s ON u.id = s.user_id
+				WHERE s.session_key = $1`
+	err := db.Get(&user, query, session_key);
+	if err == sql.ErrNoRows || err != nil || user.ID == 0 {
+		return nil, fmt.Errorf("invalid session token")
+	}
+	return &user, nil
 }
 
 func GetUserByUsername(username string) (*User, error) {
+
 	user := User{}
 
-	err := db.Get(&user, "SELECT * FROM users WHERE username = ?", username)
-
+	err := db.Get(&user, `SELECT * FROM users WHERE id='1'`)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("no user found with username: %s", username)
 	}
+	fmt.Println("Fetched user:", user)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch user: %w", err)
 	}
@@ -75,10 +116,9 @@ func GetProjectsDB(id int) ([]Project, error) {
 func CreateProjectDB(p Project) (*Project, error) {
 	p.ID = uuid.New().String()
 	p.CreatedAt = time.Now()
-	p.UpdatedAt = time.Now()
 
-	_, err := db.NamedExec(`INSERT INTO projects (id, user_id, name, description, created_at, updated_at)
-		VALUES (:id, :user_id, :name, :description, :created_at, :updated_at)`, p)
+	_, err := db.NamedExec(`INSERT INTO projects (id, user_id, name, description, created_at)
+		VALUES (:id, :user_id, :name, :description, :created_at)`, p)
 	if err != nil {
 		return nil, err
 	}
@@ -134,10 +174,9 @@ func CreateTodoDB(t Todo, userID int) (*Todo, error) {
 	t.ID = uuid.New().String()
 	t.Status = "todo"
 	t.CreatedAt = time.Now()
-	t.UpdatedAt = time.Now()
 
-	_, err = db.NamedExec(`INSERT INTO todos (id, title, description, status, project_id, created_at, updated_at)
-        VALUES (:id, :title, :description, :status, :project_id, :created_at, :updated_at)`, t)
+	_, err = db.NamedExec(`INSERT INTO todos (id, title, description, status, project_id, created_at)
+        VALUES (:id, :title, :description, :status, :project_id, :created_at)`, t)
 	if err != nil {
 		return nil, err
 	}
@@ -156,10 +195,8 @@ func UpdateTodoDB(todoID string, userID int, t Todo) (*Todo, error) {
 	}
 
 	t.ID = todoID
-	t.UpdatedAt = time.Now()
 
-	_, err = db.NamedExec(`UPDATE todos SET title = :title, description = :description, status = :status, updated_at = :updated_at
-        WHERE id = :id`, t)
+	_, err = db.NamedExec(`UPDATE todos SET title = :title, description = :description, status = :status WHERE id = :id`, t)
 	if err != nil {
 		return nil, err
 	}

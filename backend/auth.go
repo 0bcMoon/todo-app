@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"golang.org/x/crypto/bcrypt"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -17,13 +17,12 @@ type UserLogin struct {
 	Password string `json:"password"`
 }
 
-func getUserInfo(_ string) (*User, error) {
-	// Dummy validation for example purposes
-	return &User{
-		ID:       1,
-		Username: "0bcMoon",
-		Password: "thisisahashpassword",
-	}, nil
+func getUserInfo(session_key string) (*User, error) {
+	user, err := GetUserFromSession(session_key)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 var Session map[string]User
@@ -42,7 +41,6 @@ func AuthMiddleware() func(next http.Handler) http.Handler {
 				return
 			}
 			session_token := session_cookies.Value
-
 			if  session_token == "" {
 				http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 				return
@@ -52,7 +50,6 @@ func AuthMiddleware() func(next http.Handler) http.Handler {
 				http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 				return
 			}
-			fmt.Println("Authenticated user:", user.Username)
 			ctx := context.WithValue(r.Context(), UserContextKey, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
@@ -71,14 +68,13 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	user, err := GetUserByUsername(req.Username)
 	if err != nil {
 		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 		return
 	}
 	// TODO: Hash password and compare with stored hash
-	if user.Password != req.Password {
+	if !VerifyPassword(req.Password, user.Password) {
 		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 		return
 	}
@@ -86,6 +82,11 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	session_key, err := getRandomKey(24)
 	if err != nil {
 		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+		return
+	}
+	err = CreateSession(session_key, user.ID)
+	if err != nil {
+		http.Error(w, "Could not create session", http.StatusInternalServerError)
 		return
 	}
 	session_cookies := &http.Cookie{
@@ -117,6 +118,17 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "logout successful"})
 
 	
+}
+// HashPassword generates a bcrypt hash for the given password.
+func HashPassword(password string) (string, error) {
+    bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+    return string(bytes), err
+}
+
+// VerifyPassword verifies if the given password matches the stored hash.
+func VerifyPassword(password, hash string) bool {
+    err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+    return err == nil
 }
 
 func getRandomKey(size int) (string, error) {
