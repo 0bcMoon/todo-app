@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 	"github.com/jmoiron/sqlx"
-	"github.com/joho/godotenv"
+	_ "github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
 
@@ -22,10 +22,10 @@ func ensure() {
 
 func loadEnv() {
 
-	err := godotenv.Load()
-	if err != nil {
-		panic("Error loading .env file")
-	}
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	panic("Error loading .env file")
+	// }
 	ensure()
 }
 
