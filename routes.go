@@ -10,11 +10,23 @@ import (
 	"log"
 )
 
+func getHealth(w http.ResponseWriter, r *http.Request) {
+	// return a simple json response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
 func setupRoutes() http.Handler {
 	r := chi.NewRouter()
 
 	// Middlewares
 	r.Use(middleware.Logger)
+	r.Route("/health", func(r chi.Router) {
+		r.Get("/", getHealth)
+
+	})
+
 
 	r.Route("/projects", func(r chi.Router) {
 		r.Use(AuthMiddleware())
