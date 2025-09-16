@@ -44,7 +44,13 @@ func main() {
 	r := setupRoutes()
 
 	log.Println("Server starting on port 8080...")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	port := ":" 
+	if os.Getenv("PORT") != "" {
+		port += os.Getenv("PORT")
+	} else {
+		port += "8080"
+	}
+	log.Fatal(http.ListenAndServe(port, r))
 }
 
 func applySchema() error {
