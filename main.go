@@ -31,14 +31,14 @@ func loadEnv() {
 
 func main() {
 
-	setupDB()
-
 	var err error
 	db, err = sqlx.Connect("sqlite3", "./todo.db")
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
 	defer db.Close()
+
+	setupDB();
 
 	r := setupRoutes()
 
@@ -62,20 +62,13 @@ func applySchema() error {
 }
 
 func setupDB() {
+
 	migrate := flag.Bool("migrate", false, "Run database migrations and exit")
 	flag.Parse()
 
-	loadEnv()
-	var err error
-	db, err = sqlx.Connect("sqlite3", "./todo.db")
-	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
-	}
-	defer db.Close()
-
 	if *migrate {
 		log.Println("Running database migrations...")
-		err = applySchema()
+		err := applySchema()
 		if err != nil {
 			log.Fatal("Failed to apply database schema:", err)
 		}
@@ -84,8 +77,6 @@ func setupDB() {
 		_, err = CreateUser("hicham", "password"); // this is very secure hhh
 		if err != nil {
 			log.Println("User creation skipped:", err)
-			panic(err)
 		}
-		return
 	}
 }
