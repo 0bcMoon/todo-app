@@ -22,12 +22,6 @@ func setupRoutes() http.Handler {
 
 	// Middlewares
 	r.Use(middleware.Logger)
-	r.Route("/", func(r chi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, "./frontend/dist/index.html")
-		})
-	})
-
 
 	r.Route("/projects", func(r chi.Router) {
 		r.Use(AuthMiddleware())
@@ -89,7 +83,7 @@ func staticFileServer(r chi.Router, path string, root http.FileSystem) {
 		_, err := root.Open(r.URL.Path)
 		if os.IsNotExist(err) {
 			// File does not exist, serve index.html
-			http.ServeFile(w, r, "frontend/dist/index.html")
+			http.ServeFile(w, r, "../frontend/dist/index.html")
 			return
 		}
 		fs.ServeHTTP(w, r)
