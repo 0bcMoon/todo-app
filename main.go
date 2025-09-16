@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
@@ -77,7 +76,7 @@ func setupDB() {
 		}
 		log.Println("Database migrations applied successfully.")
 
-		_, err = CreateUser("hicham", "password");
+		_, err = CreateUser("hicham", "password"); // this is very secure hhh
 		if err != nil {
 			log.Println("User creation skipped:", err)
 			panic(err)

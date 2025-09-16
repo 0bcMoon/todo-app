@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
-	"log"
 	"github.com/google/uuid"
 )
 
@@ -85,7 +84,6 @@ func GetUserByUsername(username string) (*User, error) {
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("no user found with username: %s", username)
 	}
-	fmt.Println("Fetched user:", user)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch user: %w", err)
 	}

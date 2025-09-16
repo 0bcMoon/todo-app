@@ -7,7 +7,6 @@ import (
 	"strings"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 )
 
 func setupRoutes() http.Handler {
@@ -15,15 +14,6 @@ func setupRoutes() http.Handler {
 
 	// Middlewares
 	r.Use(middleware.Logger)
-	// CORS middleware
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"}, // Adjust for your frontend URL
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300, // Maximum value not ignored by any of major browsers
-	}))
 
 	r.Route("/projects", func(r chi.Router) {
 		r.Use(AuthMiddleware())
@@ -58,7 +48,7 @@ func setupRoutes() http.Handler {
 
 	// Serve frontend
 	workDir, _ := os.Getwd()
-	filesDir := http.Dir(filepath.Join(workDir, "..", "frontend", "dist"))
+	filesDir := http.Dir(filepath.Join(workDir, "frontend", "dist"))
 	staticFileServer(r, "/", filesDir)
 
 	return r
@@ -82,7 +72,7 @@ func staticFileServer(r chi.Router, path string, root http.FileSystem) {
 		_, err := root.Open(r.URL.Path)
 		if os.IsNotExist(err) {
 			// File does not exist, serve index.html
-			http.ServeFile(w, r, "../frontend/dist/index.html")
+			http.ServeFile(w, r, "frontend/dist/index.html")
 			return
 		}
 		fs.ServeHTTP(w, r)
