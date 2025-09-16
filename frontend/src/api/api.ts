@@ -1,14 +1,12 @@
 import axios from 'axios';
 import { Project, Todo, CreateProjectData, CreateTodoData } from '../types';
 
-const API_URL = 'http://localhost:8080';
 
 interface LoginBody {
     username: string;
     password: string;
 }
 const _api = axios.create({
-    baseURL: API_URL,
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',

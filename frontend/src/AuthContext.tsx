@@ -34,9 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         if (isError) {
-            setAuth(false);
+            logout();
             setLoading(false);
-            // logout();
         }
     }, [isError]);
 
