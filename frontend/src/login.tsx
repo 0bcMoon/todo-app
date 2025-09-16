@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { Eye, EyeOff, User2 } from 'lucide-react';
 import { api } from './api/api';
 import { useAuth } from './AuthContext';
+import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const loginSchema = z.object({
     username: z.string().min(1, 'Username is required').min(3, 'Username must be at least 3 characters'),
@@ -20,11 +22,14 @@ const LoginForm: React.FC = () => {
     const { setAuth } = useAuth();
 
 
+    const navigation = useNavigate();
 
     const loginMutation = useMutation({
         mutationFn: api.login,
         onSuccess: () => {
             setAuth(true)
+            toast.success('Login successful!');
+            navigation('/');
         },
     });
 

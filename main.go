@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -62,21 +61,15 @@ func applySchema() error {
 }
 
 func setupDB() {
-
-	migrate := flag.Bool("migrate", false, "Run database migrations and exit")
-	flag.Parse()
-
-	if *migrate {
-		log.Println("Running database migrations...")
-		err := applySchema()
-		if err != nil {
-			log.Fatal("Failed to apply database schema:", err)
-		}
-		log.Println("Database migrations applied successfully.")
-
-		_, err = CreateUser("hicham", "password"); // this is very secure hhh
-		if err != nil {
-			log.Println("User creation skipped:", err)
-		}
+	log.Println("Running database migrations...")
+	err := applySchema()
+	if err != nil {
+		log.Fatal("Failed to apply database schema:", err)
+		panic(err)
+	}
+	log.Println("Database migrations applied successfully.")
+	_, err = CreateUser("hicham", "password"); // this is very secure hhh
+	if err != nil {
+		log.Println("User creation skipped:", err)
 	}
 }

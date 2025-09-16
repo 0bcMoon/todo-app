@@ -21,7 +21,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isAuthenticated, setAuth] = useState<boolean>(false);
     const [isLoading, setLoading] = useState<boolean>(true);
 
-
     const logout = () => {
         api.logout();
         setAuth(false);

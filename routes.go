@@ -83,7 +83,7 @@ func staticFileServer(r chi.Router, path string, root http.FileSystem) {
 		_, err := root.Open(r.URL.Path)
 		if os.IsNotExist(err) {
 			// File does not exist, serve index.html
-			http.ServeFile(w, r, "/frontend/dist/index.html")
+			http.ServeFile(w, r, "frontend/dist/index.html")
 			return
 		}
 		fs.ServeHTTP(w, r)

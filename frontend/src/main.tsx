@@ -24,12 +24,14 @@ const AuthLayout = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
+
         if (!isAuthenticated) {
             navigate('/login');
         } else {
+            console.log("User is authenticated, navigating to home.");
             navigate('/');
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, navigate]);
 
     if (isLoading) {
         return (
