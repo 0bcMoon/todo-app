@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useProjects } from '../hooks/useProjects';
 import { ProjectCard } from './ProjectCard';
 import { ProjectForm } from './ProjectForm';
-import { Plus, FolderPlus, LogOut } from 'lucide-react';
+import { Plus, FolderPlus, LogOut, Menu, X } from 'lucide-react';
 import { api } from '../api/api';
 
 export const ProjectList: React.FC = () => {
     const [showProjectForm, setShowProjectForm] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { data: projects = [], isLoading, error } = useProjects();
     const navigate = useNavigate();
 
@@ -49,20 +50,51 @@ export const ProjectList: React.FC = () => {
                         <p className="text-gray-600 mt-1">Manage your projects and todos</p>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setShowProjectForm(true)}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                        >
-                            <Plus size={20} />
-                            New Project
-                        </button>
-                        <button
-                            onClick={handleLogout}
-                            className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
-                        >
-                            <LogOut size={20} />
-                            Logout
-                        </button>
+                        {/* Desktop buttons */}
+                        <div className="hidden md:flex items-center gap-4">
+                            <button
+                                onClick={() => setShowProjectForm(true)}
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                            >
+                                <Plus size={20} />
+                                New Project
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+                            >
+                                <LogOut size={20} />
+                                Logout
+                            </button>
+                        </div>
+
+                        {/* Mobile menu */}
+                        <div className="md:hidden relative">
+                            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 rounded-lg hover:bg-gray-200">
+                                {isMenuOpen ? <X size={24} className="text-gray-800" /> : <Menu size={24} className="text-gray-800" />}
+                            </button>
+                            {isMenuOpen && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                                    <button
+                                        onClick={() => {
+                                            setShowProjectForm(true);
+                                            setIsMenuOpen(false);
+                                        }}
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                    >
+                                        <Plus size={16} />
+                                        New Project
+                                    </button>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                    >
+                                        <LogOut size={16} />
+                                        Logout
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
