@@ -1,12 +1,11 @@
 package main
 
 import (
-	"io/ioutil"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"log"
 	"net/http"
 	"os"
-	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
 
 var db *sqlx.DB
@@ -16,32 +15,28 @@ func ensure() {
 	if cookie_domain == "" {
 		panic("COOKIE_DOMAIN not found in .env")
 	}
+
+	DATABASE_URL := os.Getenv("DATABASE_URL")
+	if DATABASE_URL == "" {
+		panic("DATABASE_URL not found in .env")
+	}
 }
-
-func loadEnv() {
-
-	// err := godotenv.Load()
-	// if err != nil {
-	// 	panic("Error loading .env file")
-	// }
-	ensure()
-}
-
 
 func main() {
 
+	ensure()
 	var err error
-	db, err = sqlx.Connect("sqlite3", "./todo.db")
+
+	db, err = sqlx.Connect("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
 	defer db.Close()
-
-	setupDB();
-
+	log.Println("Connected to the database successfully.")
+	setupDB()
 	r := setupRoutes()
 
-	port := ":" 
+	port := ":"
 	if os.Getenv("PORT") != "" {
 		port += os.Getenv("PORT")
 	} else {
@@ -52,7 +47,7 @@ func main() {
 }
 
 func applySchema() error {
-	schema, err := ioutil.ReadFile("schema.sql")
+	schema, err := os.ReadFile("schema.sql")
 	if err != nil {
 		return err
 	}
@@ -68,8 +63,4 @@ func setupDB() {
 		panic(err)
 	}
 	log.Println("Database migrations applied successfully.")
-	_, err = CreateUser("hicham", "password"); // this is very secure hhh
-	if err != nil {
-		log.Println("User creation skipped:", err)
-	}
 }

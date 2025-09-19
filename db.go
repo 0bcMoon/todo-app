@@ -3,7 +3,9 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -36,8 +38,9 @@ type Todo struct {
 
 func CreateSession(session_key string, userID int) (error) {
 	// Store the session in the database with an expiration time
-	_, err := db.Exec("INSERT INTO session (session_key, user_id) VALUES (?, ?)", session_key, userID)
+	_, err := db.Exec("INSERT INTO session (session_key, user_id) VALUES ($1, $2)", session_key, userID)
 	if err != nil {
+		log.Println("Error creating session:", err)
 		return  err
 	}
 	return nil
@@ -80,7 +83,7 @@ func GetUserByUsername(username string) (*User, error) {
 
 	user := User{}
 
-	err := db.Get(&user, `SELECT * FROM users WHERE id='1'`)
+	err := db.Get(&user, `SELECT * FROM users WHERE username=$1`, username)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("no user found with username: %s", username)
 	}
@@ -92,7 +95,7 @@ func GetUserByUsername(username string) (*User, error) {
 
 func GetCurrentUser(id int) (*User, error) {
 	var user User
-	err := db.Select(&user, "SELECT * FROM users WHERE id=?", id)
+	err := db.Get(&user, "SELECT * FROM users WHERE id=$1", id)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +104,7 @@ func GetCurrentUser(id int) (*User, error) {
 
 func GetProjectsDB(id int) ([]Project, error) {
 	var projects []Project
-	err := db.Select(&projects, "SELECT * FROM projects WHERE user_id = ? ORDER BY created_at DESC", id)
+	err := db.Select(&projects, "SELECT * FROM projects WHERE user_id = $1 ORDER BY created_at DESC", id)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +127,7 @@ func CreateProjectDB(p Project) (*Project, error) {
 }
 
 func DeleteProjectDB(projectID string, id int) error {
-	result, err := db.Exec("DELETE FROM projects WHERE id = ? AND user_id = ?", projectID, id)
+	result, err := db.Exec("DELETE FROM projects WHERE id = $1 AND user_id = $2", projectID, id)
 	if err != nil {
 		return err
 	}
@@ -141,7 +144,7 @@ func DeleteProjectDB(projectID string, id int) error {
 func GetTodosByProjectDB(projectID string, userID int) ([]Todo, error) {
 	// check if project belongs to user
 	var project Project
-	err := db.Get(&project, "SELECT id FROM projects WHERE id = ? AND user_id = ?", projectID, userID)
+	err := db.Get(&project, "SELECT id FROM projects WHERE id = $1 AND user_id = $2", projectID, userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("project not found or you don't have access")
@@ -149,7 +152,7 @@ func GetTodosByProjectDB(projectID string, userID int) ([]Todo, error) {
 		return nil, err
 	}
 	var todos []Todo
-	err = db.Select(&todos, "SELECT * FROM todos WHERE project_id = ? ORDER BY created_at DESC", projectID)
+	err = db.Select(&todos, "SELECT * FROM todos WHERE project_id = $1 ORDER BY created_at DESC", projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +165,7 @@ func GetTodosByProjectDB(projectID string, userID int) ([]Todo, error) {
 func CreateTodoDB(t Todo, userID int) (*Todo, error) {
 	// check if project belongs to user
 	var project Project
-	err := db.Get(&project, "SELECT id FROM projects WHERE id = ? AND user_id = ?", t.ProjectID, userID)
+	err := db.Get(&project, "SELECT id FROM projects WHERE id = $1 AND user_id = $2", t.ProjectID, userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("project not found or you don't have access")
@@ -184,7 +187,7 @@ func CreateTodoDB(t Todo, userID int) (*Todo, error) {
 func UpdateTodoDB(todoID string, userID int, t Todo) (*Todo, error) {
 	// check if todo belongs to user
 	var tid string
-	err := db.Get(&tid, "SELECT t.id FROM todos t JOIN projects p ON t.project_id = p.id WHERE t.id = ? AND p.user_id = ?", todoID, userID)
+	err := db.Get(&tid, "SELECT t.id FROM todos t JOIN projects p ON t.project_id = p.id WHERE t.id = $1 AND p.user_id = $2", todoID, userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("todo not found or you don't have access")
@@ -201,7 +204,7 @@ func UpdateTodoDB(todoID string, userID int, t Todo) (*Todo, error) {
 
 	// Fetch the updated todo to return it
 	var updatedTodo Todo
-	err = db.Get(&updatedTodo, "SELECT * FROM todos WHERE id = ?", todoID)
+	err = db.Get(&updatedTodo, "SELECT * FROM todos WHERE id = $1", todoID)
 	if err != nil {
 		return nil, err
 	}
@@ -211,8 +214,8 @@ func UpdateTodoDB(todoID string, userID int, t Todo) (*Todo, error) {
 func DeleteTodoDB(todoID string, userID int) error {
 	res, err := db.Exec(`
         DELETE FROM todos
-        WHERE id = ? AND project_id IN (
-            SELECT id FROM projects WHERE user_id = ?
+        WHERE id = $1 AND project_id IN (
+            SELECT id FROM projects WHERE user_id = $2
         )
     `, todoID, userID)
 
