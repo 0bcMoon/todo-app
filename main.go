@@ -10,21 +10,9 @@ import (
 
 var db *sqlx.DB
 
-func ensure() {
-	cookie_domain := os.Getenv("COOKIE_DOMAIN")
-	if cookie_domain == "" {
-		panic("COOKIE_DOMAIN not found in .env")
-	}
-
-	DATABASE_URL := os.Getenv("DATABASE_URL")
-	if DATABASE_URL == "" {
-		panic("DATABASE_URL not found in .env")
-	}
-}
 
 func main() {
 
-	ensure()
 	var err error
 
 	db, err = sqlx.Connect("postgres", os.Getenv("DATABASE_URL"))
@@ -52,6 +40,15 @@ func applySchema() error {
 		return err
 	}
 	_, err = db.Exec(string(schema))
+
+	if len(os.Args) > 1 &&  os.Args[1] == "migrate" {
+		_ , err = CreateUser("hicham", "kaissopera12");
+		if err != nil {
+			log.Println("Error creating default user:", err)
+		}
+		log.Println("Migration flag detected, exiting after applying schema.")
+		os.Exit(0)
+	}
 	return err
 }
 

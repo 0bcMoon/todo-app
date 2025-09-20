@@ -72,10 +72,20 @@ func GetUserFromSession(session_key string) (*User, error) {
 				FROM users u
 				JOIN session s ON u.id = s.user_id
 				WHERE s.session_key = $1`
-	err := db.Get(&user, query, session_key);
-	if err == sql.ErrNoRows || err != nil || user.ID == 0 {
-		return nil, fmt.Errorf("invalid session token")
+
+	err := db.Get(&user, query, session_key)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("invalid or expired session token")
+		}
+		return nil, err
 	}
+	// Update the session expiration
+	_, err = db.Exec("UPDATE session SET expires_at = CURRENT_TIMESTAMP + INTERVAL '2 hours' WHERE session_key = $1", session_key)
+	if err != nil {
+		log.Println("Error updating session expiration:", err)
+	}
+
 	return &user, nil
 }
 

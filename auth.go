@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -93,7 +92,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Name:     "session_token",
 		Value:    session_key,
 		HttpOnly: true,
-		Domain:   os.Getenv("COOKIE_DOMAIN"),
 		Path:     "/",
 		SameSite: http.SameSiteDefaultMode,
 	}
@@ -104,15 +102,16 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 func Logout(w http.ResponseWriter, r *http.Request) {
 	// Invalidate the session token (implementation depends on how sessions are managed)
+
 	session_cookies := &http.Cookie{
 		Name:     "session_token",
 		Value:    "",
 		HttpOnly: true,
-		Domain:   os.Getenv("COOKIE_DOMAIN"),
 		Path:     "/",
 		SameSite: http.SameSiteDefaultMode,
 		Expires:  time.Unix(0, 0), // Expire the cookie immediately
 	}
+
 	http.SetCookie(w, session_cookies)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "logout successful"})
