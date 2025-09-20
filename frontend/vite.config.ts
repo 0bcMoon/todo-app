@@ -7,4 +7,13 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/script.js',
+        chunkFileNames: 'assets/script.js',
+        assetFileNames: 'assets/style.css',
+      },
+    },
+  },
 });
