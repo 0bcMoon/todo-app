@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProjects } from '../hooks/useProjects';
 import { useTodos } from '../hooks/useTodos';
@@ -7,13 +7,27 @@ import { TodoForm } from './TodoForm';
 import { ArrowLeft, Plus } from 'lucide-react';
 
 export const ProjectPage: React.FC = () => {
+
     const { projectId } = useParams<{ projectId: string }>();
     const navigate = useNavigate();
     const [showTodoForm, setShowTodoForm] = useState(false);
 
+    useEffect(() => {
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'n') {
+                setShowTodoForm(true);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+
+    }, []);
+
     const { data: projects = [] } = useProjects();
     const { data: todos = [], isLoading } = useTodos(projectId!);
-
     const project = projects.find(p => p.id === projectId);
 
     if (!project) {
@@ -70,6 +84,7 @@ export const ProjectPage: React.FC = () => {
                 {/* TODO: Add drag-and-drop functionality */}
                 {/* TODO: single column for mobile, drag-and-drop for desktop */}
                 {/* TODO: add edit todo functionality */}
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <TodoColumn
                         title="To Do"

@@ -28,7 +28,6 @@ const AuthLayout = () => {
         if (!isAuthenticated) {
             navigate('/login');
         } else {
-            console.log("User is authenticated, navigating to home.");
             navigate('/');
         }
     }, [isAuthenticated, navigate]);

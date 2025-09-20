@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProjects } from '../hooks/useProjects';
 import { ProjectCard } from './ProjectCard';
@@ -12,17 +12,27 @@ export const ProjectList: React.FC = () => {
     const { data: projects = [], isLoading, error } = useProjects();
     const navigate = useNavigate();
 
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'n') {
+                setShowProjectForm(true);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
+
     const handleProjectClick = (projectId: string) => {
         navigate(`/project/${projectId}`);
     };
 
     const handleLogout = async () => {
-        try {
             await api.logout();
             navigate('/login');
-        } catch (error) {
-            console.error('Failed to logout', error);
-        }
     };
 
     if (isLoading) {

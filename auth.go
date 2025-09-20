@@ -88,12 +88,14 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Could not create session", http.StatusInternalServerError)
 		return
 	}
+
 	session_cookies := &http.Cookie{
 		Name:     "session_token",
 		Value:    session_key,
 		HttpOnly: true,
 		Path:     "/",
 		SameSite: http.SameSiteDefaultMode,
+		Expires:  time.Now().Add(24 * time.Hour),
 	}
 	http.SetCookie(w, session_cookies)
 	w.Header().Set("Content-Type", "application/json")

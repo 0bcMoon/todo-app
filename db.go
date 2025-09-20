@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"time"
-
 	"github.com/google/uuid"
 )
 
@@ -16,6 +15,13 @@ type User struct {
 	Password   string     `json:"password"   db:"password"`
 	CreatedAt  time.Time  `json:"createdAt"  db:"created_at"`
 }
+
+type UserWithSession struct {
+	User                    // Embedded User struct
+	SessionKey string      `db:"session_key" json:"session_key"`
+	ExpiresAt  time.Time   `db:"expires_at" json:"expires_at"`
+}
+
 
 // Project represents a project in our database
 type Project struct {
@@ -62,32 +68,45 @@ func CreateUser(username, password string) (*User, error) {
 	return &user, nil
 }
 
+func deleteSessions() {
+
+	_, err := db.Exec("DELETE FROM session WHERE expires_at < NOW()")
+	if err != nil {
+		log.Println("Error deleting expired sessions:", err)
+	}
+}
+
 func GetUserFromSession(session_key string) (*User, error) {
-	user := User{}
+	// Use the temporary struct to capture all data
+	userWithSession := UserWithSession{}
+	
 	query := `SELECT
 					u.id,
 					u.username,
 					u.password,
-					u.created_at
+					u.created_at,
+					s.session_key,
+					s.expires_at
 				FROM users u
 				JOIN session s ON u.id = s.user_id
 				WHERE s.session_key = $1`
-
-	err := db.Get(&user, query, session_key)
+	
+	err := db.Get(&userWithSession, query, session_key)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("invalid or expired session token")
 		}
 		return nil, err
 	}
-	// Update the session expiration
-	_, err = db.Exec("UPDATE session SET expires_at = CURRENT_TIMESTAMP + INTERVAL '2 hours' WHERE session_key = $1", session_key)
-	if err != nil {
-		log.Println("Error updating session expiration:", err)
+	
+	// Optional: Check if session is expired
+	if time.Now().After(userWithSession.ExpiresAt) {
+		deleteSessions() // Clean up expired sessions
+		return nil, fmt.Errorf("session has expired")
 	}
-
-	return &user, nil
+	return &userWithSession.User, nil
 }
+
 
 func GetUserByUsername(username string) (*User, error) {
 
